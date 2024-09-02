@@ -142,6 +142,7 @@ if __name__ == "__main__":
     from carps.benchmarks.dummy_problem import DummyProblem
     from carps.utils.task import Task
     from rich import print as rich_print
+    from pathlib import Path
 
     SEED = 42
 
@@ -155,6 +156,10 @@ if __name__ == "__main__":
     best_found = opt.run()
     rich_print(best_found)
 
+    optimizer_id = "RandomSearch"
+    problem_id = "DummyProblem"
+    logging_dir = Path("output-dir") / optimizer_id / problem_id
+
     # By default, the framework will not save any intermediate data
     # However we can add a `FileLogger` to have CARP-S save the data
     # to disk, which can be retrieved later.
@@ -163,7 +168,7 @@ if __name__ == "__main__":
     overwrite = True
     problem = DummyProblem(
         return_value=42,
-        loggers=[FileLogger(directory="output-dir", overwrite=overwrite)],
+        loggers=[FileLogger(directory=logging_dir, overwrite=overwrite)],
     )
     task = Task(n_trials=10, n_objectives=len(problem.configspace))
     opt = RandomOptimizer(problem=problem, task=task, seed=SEED)
@@ -172,15 +177,10 @@ if __name__ == "__main__":
     # Right now, there will be raw logs of the run written to disk.
     # We can ask CARP-S to gather them all up and put them together for us!
 
-    from carps.analysis.gather_data import filelogs_to_df
+    from carps.analysis.gather_data import read_trial_log
 
-    df = filelogs_to_df("output-dir")
-
-    # NOTE: This will read *all* the results for all experiments in the
-    # specified directory when called! If you just want to load
-    # the results, you can find them at `output-dir/logs.csv`.
-    # Since this is just one small experiment, it will be cheap!
-    #
-    # df = pd.read_csv("output-dir/logs.csv")
+    # We just load one log file
+    # Loading all runs from a hydra run is also easily possible, but not shown here
+    df = read_trial_log(logging_dir, log_fn="trial_logs.jsonl")
 
     print(df)
