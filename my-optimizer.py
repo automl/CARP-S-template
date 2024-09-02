@@ -144,7 +144,7 @@ if __name__ == "__main__":
     from rich import print as rich_print
     from pathlib import Path
 
-    SEED = 42
+    seed = 42
 
     # Create a dummy problem
     problem = DummyProblem(return_value=42)
@@ -152,7 +152,7 @@ if __name__ == "__main__":
     rich_print(task)
 
     # Create our optimizer and see that it runs
-    opt = RandomOptimizer(problem=problem, task=task, seed=SEED)
+    opt = RandomOptimizer(problem=problem, task=task, seed=seed)
     best_found = opt.run()
     rich_print(best_found)
 
@@ -171,7 +171,7 @@ if __name__ == "__main__":
         loggers=[FileLogger(directory=logging_dir, overwrite=overwrite)],
     )
     task = Task(n_trials=10, n_objectives=len(problem.configspace))
-    opt = RandomOptimizer(problem=problem, task=task, seed=SEED)
+    opt = RandomOptimizer(problem=problem, task=task, seed=seed)
     best_found = opt.run()
 
     # Right now, there will be raw logs of the run written to disk.
@@ -182,5 +182,15 @@ if __name__ == "__main__":
     # We just load one log file
     # Loading all runs from a hydra run is also easily possible, but not shown here
     df = read_trial_log(logging_dir, log_fn="trial_logs.jsonl")
+
+    # Add metadata (normally created and loaded by carps when using run.py)
+    df["problem_id"] = problem_id
+    df["optimizer_id"] = optimizer_id
+    df["seed"] = seed
+
+    # Add incumbent cost
+    df["trial_value__cost_inc"] = df.groupby(by=["problem_id", "optimizer_id", "seed"])[
+        "trial_value__cost"
+    ].transform("cummin")
 
     print(df)
